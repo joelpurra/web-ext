@@ -33,12 +33,12 @@ describe('web-ext yargs output width', () => {
                     'line length is not wrapped at 55 characters');
      }));
 
-  it('should wrap help output at maximum 80 characters',
+  it('should wrap help output at wide terminal width',
      () => withTempDir(async (tmpDir) => {
        const cmd = execWebExtTty(['--help'],
                                  {cwd: tmpDir.path(), cols: 120, rows: 1000});
        const maxLineLength = await getMaxDataLineLength(cmd);
-       assert.equal(maxLineLength, 80,
-                    'line length is not wrapped at 80 characters');
+       assert.equal(maxLineLength, 120,
+                    'line length is not wrapped at 120 characters');
      }));
 });
