@@ -5,6 +5,7 @@ import {promisify} from 'util';
 
 import copyDir from 'copy-dir';
 import prettyjson from 'prettyjson';
+import {spawn as ptySpawn} from 'node-pty';
 
 import * as tmpDirUtils from '../../src/util/temp-dir';
 
@@ -120,4 +121,55 @@ export function execWebExt(
   });
 
   return {argv, waitForExit, spawnedProcess};
+}
+
+// execWebExtTty helper
+
+/** Subset of a node-pty terminal */
+export type IPty = {|
+  cols: number;
+  on(event: 'data', listener: (data: string) => void): void;
+  on(event: 'exit', listener: (exitCode: number) => void): void;
+  resize(columns: number, rows: number): void;
+  rows: number;
+|};
+
+export type WebExtResultTty = {|
+  exitCode: number,
+  data: string,
+|};
+
+export type RunningWebExtTty = {|
+  argv: Array<string>,
+  waitForExit: Promise<WebExtResultTty>,
+  ptyProcess: IPty,
+|};
+
+/** Subset of node-pty spawn options */
+export type IPtyOptions = {|
+  cols?: number,
+  cwd?: string,
+  rows?: number,
+|};
+
+export function execWebExtTty(
+  argv: Array<string>, ptyOptions: IPtyOptions,
+): RunningWebExtTty {
+
+  const ptyProcess = ptySpawn(process.execPath, [webExt, ...argv], ptyOptions);
+
+  const waitForExit = new Promise((resolve) => {
+    let ptyData = '';
+
+    ptyProcess.on('data', (data) => ptyData += data);
+
+    ptyProcess.on('exit', (exitCode) => {
+      resolve({
+        exitCode,
+        data: ptyData,
+      });
+    });
+  });
+
+  return {argv, waitForExit, ptyProcess};
 }
